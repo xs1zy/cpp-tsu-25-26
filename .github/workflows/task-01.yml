@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-checker:
+    name: Build Checker
     runs-on: ubuntu-latest
     steps:
       - name: Check out base repo main for checker
@@ -46,6 +47,7 @@ jobs:
           retention-days: 7
 
   build-solution:
+    name: Build Solution
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository (PR head)
@@ -79,8 +81,8 @@ jobs:
           retention-days: 7
 
   run-examples:
+    name: Check Example Tests
     needs: [ build-checker, build-solution ]
-    name: Run solution against example tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out target branch tests

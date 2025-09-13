@@ -1,0 +1,94 @@
+name: Run Examples
+
+on:
+  workflow_run:
+    workflows: [ "Build solution" ]
+    types: [ "completed" ]
+    branches: [ "main", "task-01" ]
+    status: [ "success" ]
+
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run-examples:
+    name: Run solution against base tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute artifact name from PR head ref
+        run: |
+          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          REF="${REF//\//-}"
+          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
+
+      - name: Check out base repo main for checker
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: base_main
+          fetch-depth: 1
+
+      - name: Build cmp-file checker from base main
+        run: |
+          mkdir -p base_main/build
+          g++ -std=c++17 -O2 -pipe -I base_main \
+             base_main/checkers/cmp-file/main.cpp \
+             -o base_main/build/cmp-file
+
+      - name: Check out base branch tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: base_target
+          fetch-depth: 1
+
+      - name: Download solution artifact from PR head workflow
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: build-solution.yml
+          pr: ${{ github.event.pull_request.number }}
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+
+      - name: Make solution executable
+        run: |
+          chmod +x artifact/solution
+
+      - name: Run solution against tests and compare
+        run: |
+          set -u
+          SOL="artifact/solution"
+          CMP="base_main/build/cmp-file"
+          TEST_DIR="base_target/tests"
+          OUT_DIR="work/out"
+          mkdir -p "$OUT_DIR"
+
+          if ! compgen -G "$TEST_DIR/*.t" > /dev/null; then
+            echo "No tests found in $TEST_DIR; passing by default."
+            exit 0
+          fi
+
+          for t in "$TEST_DIR"/*.t; do
+            name=$(basename "$t")
+            out="$OUT_DIR/$name.out"
+            ans="$t.a"
+
+            if [ ! -f "$ans" ]; then
+              echo "::error::Missing answer file for $name (expected $ans)" && exit 1
+            fi
+
+            # Run solution
+            if ! "$SOL" <"$t" >"$out" 2>"$OUT_DIR/$name.stderr"; then
+              echo "::error::Runtime error on test $name" && exit 1
+            fi
+
+            if ! "$CMP" "$t" "$out" "$ans" >"$OUT_DIR/$name.cmp.stderr" 2>&1; then
+              echo "::error::Test $name failed. Checker output:" && cat "$OUT_DIR/$name.cmp.stderr" && exit 1
+            fi
+
+            echo "Passed: $name"
+          done
+
+          echo "All tests passed."

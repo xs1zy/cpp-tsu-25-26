@@ -1,33 +1,15 @@
-name: Run Examples
+name: Build solution
 
 on:
-  workflow_run:
-    workflows: [ "Build solution" ]
-    types: [ "completed" ]
-
-
-permissions:
-  contents: read
-  actions: read
+  push:
+    branches: [ "task-01" ]
+  pull_request:
+    branches: [ "task-01" ]
 
 jobs:
-  run-examples:
-    if: >
-      ${{
-        github.event.workflow_run.conclusion == 'success' &&
-        (
-          github.event.workflow_run.head_branch == 'task-01'
-        )
-      }}
-    name: Run solution against base tests
+  build-checker:
     runs-on: ubuntu-latest
     steps:
-      - name: Compute artifact name from PR head ref
-        run: |
-          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          REF="${REF//\//-}"
-          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
-
       - name: Check out base repo main for checker
         uses: actions/checkout@v4
         with:
@@ -42,6 +24,55 @@ jobs:
              base_main/checkers/cmp-file/main.cpp \
              -o base_main/build/cmp-file
 
+      - name: Compute artifact name from source branch
+        run: |
+          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          # Replace slashes with dashes to keep artifact name valid
+          REF="${REF//\//-}"
+          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: build/checker
+          if-no-files-found: error
+          retention-days: 7
+
+  build-solution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show compiler version
+        run: g++ --version
+
+      - name: Build
+        run: |
+          mkdir -p build
+          g++ -std=c++17 solution.cpp -o build/solution
+
+      - name: Compute artifact name from source branch
+        run: |
+          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          # Replace slashes with dashes to keep artifact name valid
+          REF="${REF//\//-}"
+          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: build/solution
+          if-no-files-found: error
+          retention-days: 7
+
+  run-examples:
+    needs: [ build-checker, build-solution ]
+    name: Run solution against example tests
+    runs-on: ubuntu-latest
+    steps:
       - name: Check out base branch tests
         uses: actions/checkout@v4
         with:

@@ -7,11 +7,6 @@ on:
     branches: [ "task-01" ]
   workflow_dispatch:
     inputs:
-      branch_name:
-        description: 'Target branch name'
-        required: false
-        default: 'task-01'
-        type: string
       checker_name:
         description: 'Checker name'
         required: false
@@ -24,7 +19,7 @@ on:
         type: string
 
 env:
-  BRANCH_NAME: ${{ inputs.branch_name || 'task-01' }}
+  BRANCH_NAME: 'task-01'
   CHECKER_NAME: ${{ inputs.checker_name || 'cmp-file' }}
   TESTS_TIMEOUT: ${{ inputs.tests_timeout || '3' }}
 
@@ -194,12 +189,14 @@ jobs:
           chmod +x artifact/${{ env.CHECKER_NAME }}
 
       - name: Extract secret tests
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
           mkdir -p secret-tests
           # Use dynamic secret name based on branch name
           SECRET_NAME="$(echo '${{ env.BRANCH_NAME }}' | tr '[:lower:]' '[:upper:]' | tr '-' '_')_TESTS"
           echo "Using secret: $SECRET_NAME"
-          SECRET_VALUE=$(echo '${{ toJson(secrets) }}' | jq -r ".[\"$SECRET_NAME\"]")
+          SECRET_VALUE=$(echo "$SECRETS_JSON" | jq -r ".[\"$SECRET_NAME\"]")
           if [ "$SECRET_VALUE" = "null" ] || [ -z "$SECRET_VALUE" ]; then
             echo "Warning: Secret $SECRET_NAME not found, skipping secret tests"
             exit 0

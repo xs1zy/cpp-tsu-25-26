@@ -69,6 +69,8 @@ jobs:
     steps:
       - name: Check out repository (PR head)
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Show compiler version
         run: g++ --version

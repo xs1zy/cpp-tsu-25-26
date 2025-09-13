@@ -199,7 +199,7 @@ jobs:
           SECRET_VALUE=$(echo "$SECRETS_JSON" | jq -r ".[\"$SECRET_NAME\"]")
           if [ "$SECRET_VALUE" = "null" ] || [ -z "$SECRET_VALUE" ]; then
             echo "Warning: Secret $SECRET_NAME not found, skipping secret tests"
-            exit 0
+            exit 1
           fi
           echo "$SECRET_VALUE" | base64 -d | tar -xzm --overwrite -C secret-tests
 

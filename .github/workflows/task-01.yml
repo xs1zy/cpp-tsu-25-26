@@ -3,7 +3,7 @@ name: Task 01 CI
 on:
   push:
     branches: [ "task-01" ]
-  pull_request:
+  pull_request_target:
     branches: [ "task-01" ]
   workflow_dispatch:
     inputs:

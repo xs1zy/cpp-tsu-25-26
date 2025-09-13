@@ -110,6 +110,15 @@ jobs:
           ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
           fetch-depth: 1
 
+      - name: Check out base repo main for runner
+        uses: actions/checkout@v4
+        with:
+          # Ensure we fetch the base repository (not the fork) and its main branch
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          ref: main
+          path: base_main
+          fetch-depth: 1
+
       - name: Set artifact names
         run: |
           # Get target branch and author, replace slashes with dashes
@@ -143,7 +152,7 @@ jobs:
         run: |
           set -eu
           python3 --version
-          python3 run/test_runner.py \
+          python3 base_main/run/test_runner.py \
             --timeout ${{ env.TESTS_TIMEOUT }} \
             --solution artifact/solution \
             --checker artifact/${{ env.CHECKER_NAME }} \
@@ -159,6 +168,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          fetch-depth: 1
+
+      - name: Check out base repo main for runner
+        uses: actions/checkout@v4
+        with:
+          # Ensure we fetch the base repository (not the fork) and its main branch
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          ref: main
+          path: base_main
           fetch-depth: 1
 
       - name: Set artifact names
@@ -209,7 +227,7 @@ jobs:
         run: |
           set -eu
           python3 --version
-          python3 run/test_runner.py \
+          python3 base_main/run/test_runner.py \
             --silent \
             --timeout ${{ env.TESTS_TIMEOUT }} \
             --solution artifact/solution \

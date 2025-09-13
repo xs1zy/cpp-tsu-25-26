@@ -9,10 +9,15 @@ on:
 jobs:
   build-checker:
     runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
+      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
       - name: Check out base repo main for checker
         uses: actions/checkout@v4
         with:
+          # Ensure we fetch the base repository (not the fork) and its main branch
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
           ref: main
           path: base_main
           fetch-depth: 1
@@ -24,46 +29,35 @@ jobs:
              base_main/checkers/cmp-file/main.cpp \
              -o base_main/build/cmp-file
 
-      - name: Compute artifact name from source branch
-        run: |
-          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          # Replace slashes with dashes to keep artifact name valid
-          REF="${REF//\//-}"
-          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
-
-      - name: Upload artifact
+      - name: Upload checker artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: build/checker
+          name: cmp-file-${{ env.AUTHOR_SAFE }}-${{ env.TARGET_BRANCH_SAFE }}
+          path: base_main/build/cmp-file
           if-no-files-found: error
           retention-days: 7
 
   build-solution:
     runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
+      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
-      - name: Check out repository
+      - name: Check out repository (PR head)
         uses: actions/checkout@v4
 
       - name: Show compiler version
         run: g++ --version
 
-      - name: Build
+      - name: Build solution
         run: |
           mkdir -p build
-          g++ -std=c++17 solution.cpp -o build/solution
+          g++ -std=c++17 -pipe solution.cpp -o build/solution
 
-      - name: Compute artifact name from source branch
-        run: |
-          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          # Replace slashes with dashes to keep artifact name valid
-          REF="${REF//\//-}"
-          echo "ARTIFACT_NAME=$REF" >> "$GITHUB_ENV"
-
-      - name: Upload artifact
+      - name: Upload solution artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: ${{ env.TARGET_BRANCH_SAFE }}-${{ env.AUTHOR_SAFE }}-solution
           path: build/solution
           if-no-files-found: error
           retention-days: 7
@@ -72,59 +66,43 @@ jobs:
     needs: [ build-checker, build-solution ]
     name: Run solution against example tests
     runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
+      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
-      - name: Check out base branch tests
+      - name: Check out PR head (for runner)
+        uses: actions/checkout@v4
+
+      - name: Check out target branch tests
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.ref }}
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
           path: base_target
           fetch-depth: 1
 
-      - name: Download solution artifact from PR head workflow
-        uses: dawidd6/action-download-artifact@v3
+      - name: Download checker artifact
+        uses: actions/download-artifact@v4
         with:
-          workflow: build-solution.yml
-          pr: ${{ github.event.pull_request.number }}
-          name: ${{ env.ARTIFACT_NAME }}
+          name: cmp-file-${{ env.AUTHOR_SAFE }}-${{ env.TARGET_BRANCH_SAFE }}
           path: artifact
 
-      - name: Make solution executable
+      - name: Download solution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.TARGET_BRANCH_SAFE }}-${{ env.AUTHOR_SAFE }}-solution
+          path: artifact
+
+      - name: Make binaries executable
         run: |
           chmod +x artifact/solution
+          chmod +x artifact/cmp-file
 
-      - name: Run solution against tests and compare
+      - name: Run solution against tests and compare (Python runner)
         run: |
-          set -u
-          SOL="artifact/solution"
-          CMP="base_main/build/cmp-file"
-          TEST_DIR="base_target/tests"
-          OUT_DIR="work/out"
-          mkdir -p "$OUT_DIR"
-
-          if ! compgen -G "$TEST_DIR/*.t" > /dev/null; then
-            echo "No tests found in $TEST_DIR; passing by default."
-            exit 0
-          fi
-
-          for t in "$TEST_DIR"/*.t; do
-            name=$(basename "$t")
-            out="$OUT_DIR/$name.out"
-            ans="$t.a"
-
-            if [ ! -f "$ans" ]; then
-              echo "::error::Missing answer file for $name (expected $ans)" && exit 1
-            fi
-
-            # Run solution
-            if ! "$SOL" <"$t" >"$out" 2>"$OUT_DIR/$name.stderr"; then
-              echo "::error::Runtime error on test $name" && exit 1
-            fi
-
-            if ! "$CMP" "$t" "$out" "$ans" >"$OUT_DIR/$name.cmp.stderr" 2>&1; then
-              echo "::error::Test $name failed. Checker output:" && cat "$OUT_DIR/$name.cmp.stderr" && exit 1
-            fi
-
-            echo "Passed: $name"
-          done
-
-          echo "All tests passed."
+          set -eu
+          python3 --version
+          python3 run/test_runner.py \
+            --solution artifact/solution \
+            --checker artifact/cmp-file \
+            --tests base_target/tests \
+            --out work/out

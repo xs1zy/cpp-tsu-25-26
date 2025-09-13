@@ -4,10 +4,6 @@ on:
   workflow_run:
     workflows: [ "Build solution" ]
     types: [ "completed" ]
-    branches: [ "main", "task-01" ]
-    pull_request:
-      branches: [ "task-01" ]
-    status: [ "success" ]
 
 
 permissions:
@@ -16,6 +12,13 @@ permissions:
 
 jobs:
   run-examples:
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        (
+          github.event.workflow_run.head_branch == 'task-01'
+        )
+      }}
     name: Run solution against base tests
     runs-on: ubuntu-latest
     steps:

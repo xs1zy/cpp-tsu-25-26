@@ -5,6 +5,8 @@ on:
     workflows: [ "Build solution" ]
     types: [ "completed" ]
     branches: [ "main", "task-01" ]
+    pull_request:
+      branches: [ "task-01" ]
     status: [ "success" ]
 
 

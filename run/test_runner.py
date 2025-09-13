@@ -39,6 +39,7 @@ def main():
     p.add_argument("--tests", required=True, help="Path to tests directory (with .t and .t.a files)")
     p.add_argument("--out", required=True, help="Output directory for logs and outputs")
     p.add_argument("--timeout", type=float, default=None, help="Optional per-test timeout in seconds")
+    p.add_argument("--silent", action="store_true", help="Only show final result, suppress individual test output")
     args = p.parse_args()
 
     sol = Path(args.solution)
@@ -77,28 +78,39 @@ def main():
         # Run solution
         rc, _, _ = run_cmd([str(sol)], stdin_path=t, stdout_path=out, stderr_path=serr, timeout=args.timeout)
         if rc != 0:
-            print(f"{GHA_ERROR}Runtime error on test {name}")
-            try:
-                err_txt = serr.read_text(errors='ignore')
-                if err_txt.strip():
-                    print(err_txt)
-            except Exception:
-                pass
-            return rc if rc != 0 else 1
+            if not args.silent:
+                print(f"{GHA_ERROR}Runtime error on test {name}")
+                try:
+                    err_txt = serr.read_text(errors='ignore')
+                    if err_txt.strip():
+                        print("Stderr output:")
+                        print(err_txt)
+                except Exception:
+                    pass
+            else:
+                print("Solution fails to run!")
+
+            return rc
 
         # Run checker
         rc, _, err = run_cmd([str(cmpf), str(t), str(out), str(ans)], stderr_path=str(cmp_stderr))
         if rc != 0:
-            print(f"{GHA_ERROR}Test {name} failed. Checker output:")
-            try:
-                cmp_msg = cmp_stderr.read_text(errors='ignore')
-                if cmp_msg.strip():
-                    print(cmp_msg)
-            except Exception:
-                pass
-            return rc if rc != 0 else 1
+            if args.silent:
+                print("Checker found some errors!")
+            else:
+                print(f"{GHA_ERROR}Test {name} failed.")
+                try:
+                    cmp_msg = cmp_stderr.read_text(errors='ignore')
+                    if cmp_msg.strip():
+                        print("Checker stderr output:")
+                        print(cmp_msg)
+                except Exception:
+                    print("No checker output.")
 
-        print(f"Passed: {name}")
+            return rc
+
+        if not args.silent:
+            print(f"Passed: {name}")
 
     print("All tests passed.")
     return 0

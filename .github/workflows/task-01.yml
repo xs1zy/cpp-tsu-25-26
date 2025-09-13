@@ -125,7 +125,65 @@ jobs:
           set -eu
           python3 --version
           python3 run/test_runner.py \
+            --timeout 3 \
             --solution artifact/solution \
             --checker artifact/cmp-file \
             --tests tests \
+            --out work/out
+
+  run-tests:
+    name: Final Tests
+    needs: [ build-checker, build-solution ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out target branch tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          fetch-depth: 1
+
+      - name: Set artifact names
+        run: |
+          # Get target branch and author, replace slashes with dashes
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          AUTHOR="${{ github.event.pull_request.user.login || github.actor }}"
+          TARGET_BRANCH_SAFE="${TARGET_BRANCH//\//-}"
+          AUTHOR_SAFE="${AUTHOR//\//-}"
+          echo "TARGET_BRANCH_SAFE=$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "AUTHOR_SAFE=$AUTHOR_SAFE" >> "$GITHUB_ENV"
+          echo "CHECKER_ARTIFACT_NAME=cmp-file-$AUTHOR_SAFE-$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "SOLUTION_ARTIFACT_NAME=$TARGET_BRANCH_SAFE-$AUTHOR_SAFE-solution" >> "$GITHUB_ENV"
+
+      - name: Download checker artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.CHECKER_ARTIFACT_NAME }}
+          path: artifact
+
+      - name: Download solution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOLUTION_ARTIFACT_NAME }}
+          path: artifact
+
+      - name: Make binaries executable
+        run: |
+          chmod +x artifact/solution
+          chmod +x artifact/cmp-file
+
+      - name: Extract secret tests
+        run: |
+          mkdir -p secret-tests
+          echo "${{ secrets.TASK_01_TESTS }}" | base64 -d | tar -xzm --overwrite -C secret-tests
+
+      - name: Run solution against secret tests and compare (Python runner)
+        run: |
+          set -eu
+          python3 --version
+          python3 run/test_runner.py \
+            --silent \
+            --timeout 3 \
+            --solution artifact/solution \
+            --checker artifact/cmp-file \
+            --tests secret-tests \
             --out work/out

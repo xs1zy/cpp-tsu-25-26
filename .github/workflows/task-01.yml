@@ -1,4 +1,4 @@
-name: Build solution
+name: Task 01 CI
 
 on:
   push:

@@ -9,9 +9,6 @@ on:
 jobs:
   build-checker:
     runs-on: ubuntu-latest
-    env:
-      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
-      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
       - name: Check out base repo main for checker
         uses: actions/checkout@v4
@@ -29,19 +26,27 @@ jobs:
              base_main/checkers/cmp-file/main.cpp \
              -o base_main/build/cmp-file
 
+      - name: Set artifact names
+        run: |
+          # Get target branch and author, replace slashes with dashes
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          AUTHOR="${{ github.event.pull_request.user.login || github.actor }}"
+          TARGET_BRANCH_SAFE="${TARGET_BRANCH//\//-}"
+          AUTHOR_SAFE="${AUTHOR//\//-}"
+          echo "TARGET_BRANCH_SAFE=$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "AUTHOR_SAFE=$AUTHOR_SAFE" >> "$GITHUB_ENV"
+          echo "CHECKER_ARTIFACT_NAME=cmp-file-$AUTHOR_SAFE-$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+
       - name: Upload checker artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cmp-file-${{ env.AUTHOR_SAFE }}-${{ env.TARGET_BRANCH_SAFE }}
+          name: ${{ env.CHECKER_ARTIFACT_NAME }}
           path: base_main/build/cmp-file
           if-no-files-found: error
           retention-days: 7
 
   build-solution:
     runs-on: ubuntu-latest
-    env:
-      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
-      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
       - name: Check out repository (PR head)
         uses: actions/checkout@v4
@@ -52,12 +57,23 @@ jobs:
       - name: Build solution
         run: |
           mkdir -p build
-          g++ -std=c++17 -pipe solution.cpp -o build/solution
+          g++ -std=c++17 -O2 -pipe solution.cpp -o build/solution
+
+      - name: Set artifact names
+        run: |
+          # Get target branch and author, replace slashes with dashes
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          AUTHOR="${{ github.event.pull_request.user.login || github.actor }}"
+          TARGET_BRANCH_SAFE="${TARGET_BRANCH//\//-}"
+          AUTHOR_SAFE="${AUTHOR//\//-}"
+          echo "TARGET_BRANCH_SAFE=$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "AUTHOR_SAFE=$AUTHOR_SAFE" >> "$GITHUB_ENV"
+          echo "SOLUTION_ARTIFACT_NAME=$TARGET_BRANCH_SAFE-$AUTHOR_SAFE-solution" >> "$GITHUB_ENV"
 
       - name: Upload solution artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.TARGET_BRANCH_SAFE }}-${{ env.AUTHOR_SAFE }}-solution
+          name: ${{ env.SOLUTION_ARTIFACT_NAME }}
           path: build/solution
           if-no-files-found: error
           retention-days: 7
@@ -66,9 +82,6 @@ jobs:
     needs: [ build-checker, build-solution ]
     name: Run solution against example tests
     runs-on: ubuntu-latest
-    env:
-      TARGET_BRANCH_SAFE: ${{ replace(github.event.pull_request.base.ref || github.ref_name, '/', '-') }}
-      AUTHOR_SAFE: ${{ replace(github.event.pull_request.user.login || github.actor, '/', '-') }}
     steps:
       - name: Check out PR head (for runner)
         uses: actions/checkout@v4
@@ -80,16 +93,28 @@ jobs:
           path: base_target
           fetch-depth: 1
 
+      - name: Set artifact names
+        run: |
+          # Get target branch and author, replace slashes with dashes
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          AUTHOR="${{ github.event.pull_request.user.login || github.actor }}"
+          TARGET_BRANCH_SAFE="${TARGET_BRANCH//\//-}"
+          AUTHOR_SAFE="${AUTHOR//\//-}"
+          echo "TARGET_BRANCH_SAFE=$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "AUTHOR_SAFE=$AUTHOR_SAFE" >> "$GITHUB_ENV"
+          echo "CHECKER_ARTIFACT_NAME=cmp-file-$AUTHOR_SAFE-$TARGET_BRANCH_SAFE" >> "$GITHUB_ENV"
+          echo "SOLUTION_ARTIFACT_NAME=$TARGET_BRANCH_SAFE-$AUTHOR_SAFE-solution" >> "$GITHUB_ENV"
+
       - name: Download checker artifact
         uses: actions/download-artifact@v4
         with:
-          name: cmp-file-${{ env.AUTHOR_SAFE }}-${{ env.TARGET_BRANCH_SAFE }}
+          name: ${{ env.CHECKER_ARTIFACT_NAME }}
           path: artifact
 
       - name: Download solution artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.TARGET_BRANCH_SAFE }}-${{ env.AUTHOR_SAFE }}-solution
+          name: ${{ env.SOLUTION_ARTIFACT_NAME }}
           path: artifact
 
       - name: Make binaries executable

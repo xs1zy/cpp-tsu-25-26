@@ -83,14 +83,10 @@ jobs:
     name: Run solution against example tests
     runs-on: ubuntu-latest
     steps:
-      - name: Check out PR head (for runner)
-        uses: actions/checkout@v4
-
       - name: Check out target branch tests
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.ref || github.ref_name }}
-          path: base_target
           fetch-depth: 1
 
       - name: Set artifact names
@@ -129,5 +125,5 @@ jobs:
           python3 run/test_runner.py \
             --solution artifact/solution \
             --checker artifact/cmp-file \
-            --tests base_target/tests \
+            --tests tests \
             --out work/out

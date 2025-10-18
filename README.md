@@ -91,7 +91,7 @@ struct Product {
 
 **Граф зависимостей между функциями:**
 
-![function-dependencies](/home/sr9000/Documents/work/tsu/cpp-2grade-25-autumn/tasks/module-01-2025-10-18/function-dependencies.svg)
+![function-dependencies](images/function-dependencies.svg)
 
 Все перечисленные функции распределяются в отдельные "единицы компиляции" согласно варианту. Каждая единица компиляции компилируется в библиотеку (статическую либо динамическую, также согласно варианту).
 
@@ -107,7 +107,7 @@ struct Product {
 
 **Что приводит к следующим зависимостям между библиотеками:**
 
-![module-dependencies](/home/sr9000/Documents/work/tsu/cpp-2grade-25-autumn/tasks/module-01-2025-10-18/module-dependencies.svg)
+![module-dependencies](images/module-dependencies.svg)
 
 `Makefile` должен корректно отражаеть структуру решения и выполнять сборку `analyze.exe` по команде:
 

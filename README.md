@@ -58,7 +58,7 @@ void sort(Index arr[], long long int n);
 - Минимум `minimum` ($\min_i a_i$)
 - Максимум `maximum` ($\max_i a_i$)
 - Среднее `average` ($\sum_i a_i \over n$)
-- Медианное `median` ($a_k : \sum_i ( a_i < a_k ) = \sum_i ( a_i > a_k )$)
+- Медианное `median` (${a_k : \sum_i ( a_i < a_k ) = \sum_i ( a_i > a_k )}$)
 - Сумма `sum` ($\sum_i a_i$)
 - Произведение `product` ($\prod_i a_i$)
 - Геометрическое сресднее `geometric` ($\sqrt[n] {\prod_i a_i}$)

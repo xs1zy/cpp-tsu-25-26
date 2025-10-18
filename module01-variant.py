@@ -123,7 +123,7 @@ def compute_variant(fio: str, x_min=2, x_max=33, y_min=2, y_max=21) -> Dict:
         else:
             score2 = score1
 
-    X = rng.randint(x_min, x_max)
+    X = rand_odd_in_range(rng, x_min, x_max)
     Y = rand_odd_in_range(rng, y_min, y_max)
 
     libs = generate_libs_on_the_fly(sort1, sort2, score1, score2, rng)

@@ -1,0 +1,75 @@
+hi
+total 36K
+drwxrwxrwx 1 root root 512 Oct 20 20:49 ./
+drwxrwxrwx 1 root root 512 Oct 20 20:29 ../
+-rwxrwxrwx 1 root root 17K Oct 20 20:49 a.out
+drwxrwxrwx 1 root root 512 Oct 20 20:48 build/
+-rwxrwxrwx 1 root root 282 Oct 20 20:28 desktop.ini
+-rwxrwxrwx 1 root root   3 Oct 20 20:49 execution.log
+-rwxrwxrwx 1 root root  82 Oct 20 20:34 hi.cpp
+-rwxrwxrwx 1 root root 266 Oct 20 20:34 names.cpp
+-rwxrwxrwx 1 root root 16K Oct 20 20:46 names.exe
+-rwxrwxrwx 1 root root  83 Oct 20 20:34 ola.cpp
+ola
+.
+├── build
+│   ├── a.out
+│   └── ola.exe
+├── desktop.ini
+├── execution.log
+├── hi.cpp
+├── names.cpp
+├── names.exe
+└── ola.cpp
+
+2 directories, 8 files
+00000000000011a4 T _fini
+0000000000001000 T _init
+0000000000001080 T _start
+0000000000001169 T main
+ola
+000000000000117c T _fini
+0000000000001000 T _init
+0000000000001060 T _start
+0000000000001150 T main
+0000000000001180 T _Z3barv
+0000000000001160 T _Z3foodd
+0000000000001140 T _Z3foov
+0000000000001150 T _Z3foox
+000000000000119c T _fini
+0000000000001000 T _init
+0000000000001040 T _start
+0000000000001190 T bar
+0000000000001130 T main
+.
+├── build
+│   ├── a.out
+│   ├── names.exe
+│   ├── ola.exe
+│   └── ola_clang.exe
+├── desktop.ini
+├── execution.log
+├── hi.cpp
+├── names.cpp
+├── names.exe
+└── ola.cpp
+
+2 directories, 10 files
+.
+├── desktop.ini
+├── execution.log
+├── hi.cpp
+├── names.cpp
+├── names.exe
+└── ola.cpp
+
+1 directory, 6 files
+total 20K
+drwxrwxrwx 1 root root  512 Oct 20 20:50 ./
+drwxrwxrwx 1 root root  512 Oct 20 20:29 ../
+-rwxrwxrwx 1 root root  282 Oct 20 20:28 desktop.ini
+-rwxrwxrwx 1 root root 1.6K Oct 20 20:50 execution.log
+-rwxrwxrwx 1 root root   82 Oct 20 20:34 hi.cpp
+-rwxrwxrwx 1 root root  266 Oct 20 20:34 names.cpp
+-rwxrwxrwx 1 root root  16K Oct 20 20:46 names.exe
+-rwxrwxrwx 1 root root   83 Oct 20 20:34 ola.cpp
